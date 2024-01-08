@@ -14,15 +14,21 @@ client_s = None
 DEBUG = 0
 
 _DEFAULT_STATIC_HOST = const("https://felix.dogcraft.de/webrepl/")
+_WELCOME_PROMPT = const("\r\nWebREPL connected\r\n>>> ")
 static_host = _DEFAULT_STATIC_HOST
+webrepl_pass = None
 
 class WebreplWrapper(io.IOBase):
     def __init__(self, sock):
         self.sock = sock
-        self.pw = bytearray(16)
-        self.pwPos = 0
         self.sock.ioctl(9, 2)
-        self.sock.write("Password: ")
+        if webrepl_pass is not None:
+            self.pw = bytearray(16)
+            self.pwPos = 0
+            self.sock.write("Password: ")
+        else:
+            self.pw = None
+            self.sock.write(_WELCOME_PROMPT);
 
     def readinto(self, buf):
         if self.pw is not None:
@@ -38,7 +44,8 @@ class WebreplWrapper(io.IOBase):
                     print(self.pw[0:self.pwPos])
                     if bytes(self.pw[0:self.pwPos]) == webrepl_pass:
                         self.pw = None
-                        self.sock.write("\r\nWebREPL connected\r\n>>> ")
+                        del self.pwPos
+                        self.sock.write(_WELCOME_PROMPT)
                         break
                     else:
                         print(bytes(self.pw[0:self.pwPos]))
@@ -196,16 +203,19 @@ def stop():
 def start(port=8266, password=None, accept_handler=accept_conn):
     global static_host, webrepl_pass
     stop()
-    webrepl_pass = password.encode()
-    if webrepl_pass is None:
+    webrepl_pass = password
+    if password is None:
         try:
             import webrepl_cfg
 
-            webrepl_pass = webrepl_cfg.PASS.encode()
+            webrepl_pass = webrepl_cfg.PASS
             if hasattr(webrepl_cfg, "BASE"):
                 static_host = webrepl_cfg.BASE
         except:
             print("WebREPL is not configured, run 'import webrepl_setup'")
+
+    if webrepl_pass is not None:
+        webrepl_pass = webrepl_pass.encode()
 
     s = setup_conn(port, accept_handler)
 
