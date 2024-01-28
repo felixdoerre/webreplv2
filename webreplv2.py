@@ -149,7 +149,7 @@ def setup_conn(port, accept_handler):
     listen_s = socket.socket()
     listen_s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
 
-    ai = socket.getaddrinfo("::", port)
+    ai = socket.getaddrinfo("0.0.0.0", port)
     addr = ai[0][4]
 
     listen_s.bind(addr)
